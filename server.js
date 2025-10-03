@@ -18,6 +18,21 @@ const allowedOrigins = [
   'https://shivaklik-frontend.vercel.app',    // Your main Vercel deployment domain
 ];
 
+// Function to check if origin is allowed
+const isAllowedOrigin = (origin) => {
+  // Allow exact matches from allowedOrigins array
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+  
+  // Allow all Vercel deployment variations for shivaklik-frontend
+  if (origin && origin.match(/^https:\/\/shivaklik-frontend.*\.vercel\.app$/)) {
+    return true;
+  }
+  
+  return false;
+};
+
 // Socket.IO with dynamic CORS
 const io = socketIo(server, {
   cors: {
@@ -25,7 +40,7 @@ const io = socketIo(server, {
       // Allow requests with no origin (mobile apps, postman, etc.)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
         console.log('Blocked by CORS:', origin);
@@ -43,7 +58,8 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
+      console.log('CORS allowed for:', origin);
       callback(null, true);
     } else {
       console.log('Blocked by CORS:', origin);
@@ -125,8 +141,9 @@ io.on('connection', (socket) => {
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Shivalik Service Hub Backend API',
-    cors: 'Configured for multiple origins',
-    allowedOrigins: allowedOrigins
+    cors: 'Configured with pattern matching for Vercel deployments',
+    allowedOrigins: allowedOrigins,
+    vercelPattern: 'https://shivaklik-frontend*.vercel.app'
   });
 });
 
