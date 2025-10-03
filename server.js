@@ -15,9 +15,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'http://localhost:5173',                    // Vite dev server
   'http://localhost:3000',                    // Alternative local dev port
-  'https://shivaklik-frontend.vercel.app',    // Your Vercel deployment
-  'https://shivaklik-frontend-git-main-divyanshgupta04s-projects.vercel.app', // Vercel git branch URL
-  'https://shivaklik-frontend-1e9cl06yy-divyanshgupta04s-projects.vercel.app'  // Vercel deployment URL from image
+  'https://shivaklik-frontend.vercel.app',    // Your main Vercel deployment domain
 ];
 
 // Socket.IO with dynamic CORS
@@ -54,20 +52,13 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 }));
 
-// Handle preflight requests
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
-  }
-  res.sendStatus(200);
-});
+// Handle preflight requests - Remove the problematic wildcard handler
+// The CORS middleware above already handles preflight requests automatically
 
 app.use(express.json());
 
