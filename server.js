@@ -10,19 +10,64 @@ const { verifyEmailTransport } = require('./utils/email');
 
 const app = express();
 const server = http.createServer(app);
+
+// Define allowed origins for CORS
+const allowedOrigins = [
+  'http://localhost:5173',                    // Vite dev server
+  'http://localhost:3000',                    // Alternative local dev port
+  'https://shivaklik-frontend.vercel.app',    // Your Vercel deployment
+  'https://shivaklik-frontend-git-main-divyanshgupta04s-projects.vercel.app', // Vercel git branch URL
+  'https://shivaklik-frontend-1e9cl06yy-divyanshgupta04s-projects.vercel.app'  // Vercel deployment URL from image
+];
+
+// Socket.IO with dynamic CORS
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173", // Vite default port
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log('Blocked by CORS:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true
   }
 });
 
-// Middleware
+// CORS Middleware with dynamic origin checking
 app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
+
+// Handle preflight requests
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+  }
+  res.sendStatus(200);
+});
 
 app.use(express.json());
 
@@ -36,9 +81,10 @@ app.use(session({
     touchAfter: 24 * 3600 // lazy session update
   }),
   cookie: {
-    secure: false, // set to true if using https
+    secure: process.env.NODE_ENV === 'production', // true for https in production
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // For cross-origin cookies
   }
 }));
 
@@ -86,12 +132,26 @@ io.on('connection', (socket) => {
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Shivalik Service Hub Backend API' });
+  res.json({ 
+    message: 'Shivalik Service Hub Backend API',
+    cors: 'Configured for multiple origins',
+    allowedOrigins: allowedOrigins
+  });
+});
+
+// Health check route
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin || 'No origin header'
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Allowed CORS origins:', allowedOrigins);
 });
 
 module.exports = { app, io };
