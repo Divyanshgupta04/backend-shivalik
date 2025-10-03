@@ -158,8 +158,10 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log('✅ CORS configured with pattern matching for Vercel deployments');
   console.log('Allowed CORS origins:', allowedOrigins);
+  console.log('Vercel pattern: https://shivaklik-frontend*.vercel.app');
 });
 
 module.exports = { app, io };
